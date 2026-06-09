@@ -675,15 +675,21 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) 
       </div>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px', display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-        <Card pad={28} style={{ gridColumn: '1 / -1', position: 'relative', overflow: 'hidden' }}>
+        <Card pad={28} style={{ gridColumn: '1 / -1', position: 'relative', overflow: 'visible' }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
             <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: C.inkSubtle, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
               {remaining >= 0 ? 'Lo que te queda este mes' : 'Te pasaste por'}
             </div>
             <div style={{
-              fontFamily: FONT_DISPLAY, fontSize: 64, lineHeight: 1, fontWeight: 500,
+              fontFamily: FONT_DISPLAY,
+              fontSize: 'clamp(36px, 8vw, 64px)',
+              lineHeight: 1.1,
+              fontWeight: 500,
               color: remaining >= 0 ? C.ink : C.rose,
-              letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-0.03em',
+              fontVariantNumeric: 'tabular-nums',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
             }}>
               {fmt(Math.abs(remaining), profile.currency)}
             </div>
