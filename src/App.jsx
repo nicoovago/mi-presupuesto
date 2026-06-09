@@ -562,9 +562,11 @@ function AllocationBar({ income, fixed, debts, variable, remaining }) {
   );
 }
 
-function Dashboard({ profile, transactions, onAdd, onDelete, onEdit }) {
+function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const month = thisMonth();
   const txMonth = useMemo(
@@ -663,7 +665,7 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit }) {
             </div>
           )}
         </div>
-        <button onClick={onEdit} style={{
+        <button onClick={() => setShowSettings(true)} style={{
           background: C.card, border: `1px solid ${C.line}`, borderRadius: 12,
           padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
           color: C.ink, fontFamily: FONT_BODY, fontSize: 14, fontWeight: 500,
@@ -928,7 +930,7 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit }) {
               <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: C.inkSubtle, letterSpacing: 1, textTransform: 'uppercase' }}>Tu base mensual</div>
               <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: C.ink, fontWeight: 500, margin: '4px 0 0' }}>Fijos y deudas</h3>
             </div>
-            <button onClick={onEdit} style={{
+            <button onClick={() => setShowSettings(true)} style={{
               background: 'transparent', border: `1px solid ${C.line}`, borderRadius: 10,
               padding: '8px 12px', cursor: 'pointer', color: C.inkSoft,
               fontFamily: FONT_BODY, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
@@ -1019,6 +1021,137 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit }) {
           onClose={() => setShowAdd(false)}
           onSave={(t) => { onAdd(t); setShowAdd(false); }}
         />
+      )}
+
+      {/* SETTINGS MODAL */}
+      {showSettings && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(20, 18, 14, 0.5)',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          zIndex: 100,
+        }} onClick={() => setShowSettings(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            width: '100%', maxWidth: 520, padding: 28, paddingBottom: 36,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, color: C.ink, fontWeight: 500, margin: 0, letterSpacing: '-0.01em' }}>
+                Ajustes
+              </h3>
+              <button onClick={() => setShowSettings(false)} style={{ background: C.bg, border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer' }}>
+                <X size={18} color={C.inkSoft} />
+              </button>
+            </div>
+
+            {/* Opción: editar perfil */}
+            <button onClick={() => { setShowSettings(false); onEdit(); }} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+              padding: '16px 18px', borderRadius: 14,
+              background: C.bg, border: `1px solid ${C.line}`,
+              cursor: 'pointer', marginBottom: 10, textAlign: 'left',
+            }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10, background: C.emeraldSoft,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Edit3 size={18} color={C.emerald} />
+              </div>
+              <div>
+                <div style={{ fontFamily: FONT_BODY, fontSize: 15, fontWeight: 600, color: C.ink }}>
+                  Editar mi perfil
+                </div>
+                <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: C.inkSoft, marginTop: 2 }}>
+                  Cambiá tu nombre, ingreso, gastos fijos o deudas
+                </div>
+              </div>
+            </button>
+
+            {/* Separador */}
+            <div style={{ height: 1, background: C.line, margin: '20px 0' }} />
+
+            {/* Zona de peligro — reset */}
+            <div style={{ padding: '16px 18px', borderRadius: 14, background: C.roseSoft, border: `1px solid ${C.rose}22` }}>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 700, color: C.rose, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
+                Zona de peligro
+              </div>
+              <button onClick={() => { setShowSettings(false); setShowResetConfirm(true); }} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                padding: '14px 16px', borderRadius: 12,
+                background: C.card, border: `1px solid ${C.rose}44`,
+                cursor: 'pointer', textAlign: 'left',
+              }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, background: C.roseSoft,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <Trash2 size={18} color={C.rose} />
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT_BODY, fontSize: 15, fontWeight: 600, color: C.rose }}>
+                    Borrar todo y empezar de cero
+                  </div>
+                  <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: C.inkSoft, marginTop: 2 }}>
+                    Elimina tu perfil, gastos y todo el historial
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESET CONFIRMATION MODAL */}
+      {showResetConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(20, 18, 14, 0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 110, padding: 24,
+        }} onClick={() => setShowResetConfirm(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: C.card, borderRadius: 20,
+            width: '100%', maxWidth: 420, padding: 32,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', background: C.roseSoft,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px',
+            }}>
+              <Trash2 size={26} color={C.rose} />
+            </div>
+            <h3 style={{
+              fontFamily: FONT_DISPLAY, fontSize: 26, color: C.ink, fontWeight: 500,
+              margin: '0 0 10px', textAlign: 'center', letterSpacing: '-0.01em',
+            }}>
+              ¿Borrás todo?
+            </h3>
+            <p style={{
+              fontFamily: FONT_BODY, fontSize: 15, color: C.inkSoft,
+              margin: '0 0 28px', textAlign: 'center', lineHeight: 1.5,
+            }}>
+              Se van a eliminar tu perfil, todos tus gastos y el historial completo.
+              Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowResetConfirm(false)} style={{
+                flex: 1, padding: '14px', borderRadius: 12,
+                background: C.bg, border: `1px solid ${C.line}`,
+                fontFamily: FONT_BODY, fontSize: 15, fontWeight: 600,
+                color: C.ink, cursor: 'pointer',
+              }}>
+                Cancelar
+              </button>
+              <button onClick={() => { setShowResetConfirm(false); onReset(); }} style={{
+                flex: 1, padding: '14px', borderRadius: 12,
+                background: C.rose, border: 'none',
+                fontFamily: FONT_BODY, fontSize: 15, fontWeight: 600,
+                color: '#fff', cursor: 'pointer',
+              }}>
+                Sí, borrar todo
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1132,6 +1265,14 @@ export default function App() {
     store.set('transactions', next);
   };
 
+  const resetApp = () => {
+    store.set('profile', null);
+    store.set('transactions', []);
+    setProfile(null);
+    setTransactions([]);
+    setView('setup');
+  };
+
   if (view === 'loading') {
     return (
       <div style={{
@@ -1159,6 +1300,7 @@ export default function App() {
       onAdd={addTx}
       onDelete={delTx}
       onEdit={() => setView('edit')}
+      onReset={resetApp}
     />
   );
 }
