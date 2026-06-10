@@ -6,7 +6,7 @@ import {
 import {
   Plus, Trash2, Wallet, Heart, Sparkles,
   X, Check, Settings, ChevronLeft, ArrowRight,
-  Edit3
+  Edit3, TrendingUp, TrendingDown
 } from 'lucide-react';
 
 /* ============================================================
@@ -538,6 +538,88 @@ function AddExpenseModal({ currency, onClose, onSave, defaultDate }) {
 }
 
 /* ============================================================
+   ADD INCOME MODAL
+   ============================================================ */
+function AddIncomeModal({ currency, onClose, onSave }) {
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(todayISO());
+
+  const save = () => {
+    const a = Number(amount);
+    if (!a || a <= 0) return;
+    onSave({
+      id: uid(), amount: a,
+      description: description.trim() || 'Ingreso extra',
+      date,
+      createdAt: new Date().toISOString(),
+    });
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(20, 18, 14, 0.5)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      zIndex: 100,
+    }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        width: '100%', maxWidth: 520, padding: 28, paddingBottom: 32,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, background: C.emeraldSoft,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <TrendingUp size={18} color={C.emerald} />
+            </div>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, color: C.ink, fontWeight: 500, margin: 0, letterSpacing: '-0.01em' }}>
+              Anotar ingreso extra
+            </h3>
+          </div>
+          <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer' }}>
+            <X size={18} color={C.inkSoft} />
+          </button>
+        </div>
+        <p style={{ fontFamily: FONT_BODY, fontSize: 14, color: C.inkSoft, margin: '0 0 20px', lineHeight: 1.5 }}>
+          Una changa, una devolución, un regalo, lo que sea que entró de más este mes.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Field label="¿Cuánto entró?">
+            <Input type="number" value={amount} onChange={setAmount} placeholder="0" prefix={currency} autoFocus />
+          </Field>
+          <Field label="¿De dónde vino?">
+            <Input value={description} onChange={setDescription} placeholder="Changa, devolución, regalo..." />
+          </Field>
+          <Field label="Fecha">
+            <Input type="date" value={date} onChange={setDate} />
+          </Field>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+          <Btn variant="ghost" onClick={onClose}>Cancelar</Btn>
+          <button
+            onClick={save}
+            disabled={!amount || Number(amount) <= 0}
+            style={{
+              flex: 1, padding: '12px 20px', borderRadius: 12, border: 'none',
+              background: Number(amount) > 0 ? C.emerald : '#ccc',
+              color: '#fff', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 600,
+              cursor: Number(amount) > 0 ? 'pointer' : 'not-allowed',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <Check size={18} /> Anotar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
    DASHBOARD
    ============================================================ */
 function LegendDot({ color, label }) {
@@ -562,8 +644,10 @@ function AllocationBar({ income, fixed, debts, variable, remaining }) {
   );
 }
 
-function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) {
+function Dashboard({ profile, transactions, incomes, onAdd, onDelete, onEdit, onReset, onAddIncome, onDeleteIncome }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddIncome, setShowAddIncome] = useState(false);
+  const [showFab, setShowFab] = useState(false);
   const [filter, setFilter] = useState('all');
   const [showSettings, setShowSettings] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -573,19 +657,25 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) 
     () => transactions.filter(t => monthOf(t.date) === month).sort((a, b) => b.date.localeCompare(a.date)),
     [transactions, month]
   );
+  const incomesMonth = useMemo(
+    () => (incomes || []).filter(i => monthOf(i.date) === month).sort((a, b) => b.date.localeCompare(a.date)),
+    [incomes, month]
+  );
 
   const fixedTotal = (profile.fixed || []).reduce((a, b) => a + (Number(b.amount) || 0), 0);
   const fixedProtected = (profile.fixed || []).filter(f => f.protected).reduce((a, b) => a + (Number(b.amount) || 0), 0);
   const debtsTotal = (profile.debts || []).reduce((a, b) => a + (Number(b.monthly) || 0), 0);
   const variableSpent = txMonth.reduce((a, b) => a + (Number(b.amount) || 0), 0);
   const variableProtected = txMonth.filter(t => t.protected).reduce((a, b) => a + (Number(b.amount) || 0), 0);
+  const extraIncomeTotal = incomesMonth.reduce((a, b) => a + (Number(b.amount) || 0), 0);
 
   const income = Number(profile.income) || 0;
+  const totalIncome = income + extraIncomeTotal;
   const totalSpent = fixedTotal + debtsTotal + variableSpent;
-  const remaining = income - totalSpent;
+  const remaining = totalIncome - totalSpent;
   const protectedTotal = fixedProtected + variableProtected;
 
-  const availableVariable = income - fixedTotal - debtsTotal;
+  const availableVariable = totalIncome - fixedTotal - debtsTotal;
   const variablePctUsed = availableVariable > 0 ? (variableSpent / availableVariable) * 100 : 0;
 
   const catData = useMemo(() => {
@@ -623,9 +713,9 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) 
   }, [txMonth, month]);
 
   const recs = useMemo(() => generateRecs({
-    income, fixedTotal, debtsTotal, variableSpent, variableProtected, fixedProtected,
+    income: totalIncome, fixedTotal, debtsTotal, variableSpent, variableProtected, fixedProtected,
     availableVariable, remaining, catData, txCount: txMonth.length, currency: profile.currency
-  }), [income, fixedTotal, debtsTotal, variableSpent, variableProtected, fixedProtected, availableVariable, remaining, catData, txMonth.length, profile.currency]);
+  }), [totalIncome, fixedTotal, debtsTotal, variableSpent, variableProtected, fixedProtected, availableVariable, remaining, catData, txMonth.length, profile.currency]);
 
   const filteredTx = txMonth.filter(t => {
     if (filter === 'protected') return t.protected;
@@ -695,13 +785,22 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) 
             </div>
             <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: C.inkSoft, marginTop: 12 }}>
               {remaining >= 0
-                ? `De ${fmt(income, profile.currency)} que entraron, ya destinaste ${fmt(totalSpent, profile.currency)}.`
-                : `Gastaste ${fmt(totalSpent, profile.currency)} de los ${fmt(income, profile.currency)} que entraron.`}
+                ? `De ${fmt(totalIncome, profile.currency)} que entraron, ya destinaste ${fmt(totalSpent, profile.currency)}.`
+                : `Gastaste ${fmt(totalSpent, profile.currency)} de los ${fmt(totalIncome, profile.currency)} que entraron.`}
+              {extraIncomeTotal > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  marginLeft: 8, background: C.emeraldSoft, color: C.emerald,
+                  borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 600,
+                }}>
+                  +{fmt(extraIncomeTotal, profile.currency)} extra
+                </span>
+              )}
             </div>
 
             <div style={{ marginTop: 24 }}>
               <AllocationBar
-                income={income} fixed={fixedTotal} debts={debtsTotal}
+                income={totalIncome} fixed={fixedTotal} debts={debtsTotal}
                 variable={variableSpent} remaining={Math.max(0, remaining)}
               />
               <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap', fontFamily: FONT_BODY, fontSize: 12, color: C.inkSoft }}>
@@ -739,7 +838,7 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) 
             {fmt(protectedTotal, profile.currency)}
           </div>
           <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: C.inkSoft, marginTop: 4 }}>
-            {income > 0 ? `${((protectedTotal / income) * 100).toFixed(0)}% de tu ingreso` : 'Sin ingreso registrado'}
+            {income > 0 ? `${((protectedTotal / totalIncome) * 100).toFixed(0)}% de tu ingreso` : 'Sin ingreso registrado'}
           </div>
           <div style={{ marginTop: 16, height: 8, borderRadius: 4, background: C.coralSoft, overflow: 'hidden' }}>
             <div style={{
@@ -1005,27 +1104,127 @@ function Dashboard({ profile, transactions, onAdd, onDelete, onEdit, onReset }) 
             </div>
           </div>
         </Card>
+
+        {/* INGRESOS EXTRA DEL MES */}
+        {incomesMonth.length > 0 && (
+          <Card pad={24} style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: C.inkSubtle, letterSpacing: 1, textTransform: 'uppercase' }}>Este mes</div>
+                <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: C.ink, fontWeight: 500, margin: '4px 0 0' }}>
+                  Ingresos extra
+                </h3>
+              </div>
+              <div style={{
+                fontFamily: FONT_DISPLAY, fontSize: 24, color: C.emerald,
+                fontWeight: 500, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
+              }}>
+                +{fmt(extraIncomeTotal, profile.currency)}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {incomesMonth.map((inc, i) => (
+                <div key={inc.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
+                  borderBottom: i < incomesMonth.length - 1 ? `1px solid ${C.line}` : 'none',
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, background: C.emeraldSoft,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <TrendingUp size={16} color={C.emerald} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: FONT_BODY, fontSize: 15, color: C.ink, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {inc.description}
+                    </div>
+                    <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: C.inkSubtle, marginTop: 2 }}>
+                      {niceDate(inc.date)}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: FONT_BODY, fontSize: 16, color: C.emerald, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    +{fmt(inc.amount, profile.currency)}
+                  </div>
+                  <button onClick={() => onDeleteIncome(inc.id)} style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer', color: C.inkSubtle, padding: 6, borderRadius: 6,
+                  }}><Trash2 size={15} /></button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
 
-      <button
-        onClick={() => setShowAdd(true)}
-        style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 50,
-          background: C.coral, color: '#fff', border: 'none',
-          borderRadius: '50%', width: 60, height: 60, cursor: 'pointer',
-          boxShadow: '0 8px 24px rgba(229, 100, 78, 0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-        aria-label="Anotar gasto"
-      >
-        <Plus size={26} />
-      </button>
+      {/* FAB expandible */}
+      {showFab && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 49,
+        }} onClick={() => setShowFab(false)} />
+      )}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+        {showFab && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                background: C.ink, color: '#fff', borderRadius: 8,
+                padding: '6px 12px', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}>Anotar ingreso extra</span>
+              <button onClick={() => { setShowFab(false); setShowAddIncome(true); }} style={{
+                background: C.emerald, color: '#fff', border: 'none',
+                borderRadius: '50%', width: 48, height: 48, cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(45,106,79,0.35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <TrendingUp size={20} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                background: C.ink, color: '#fff', borderRadius: 8,
+                padding: '6px 12px', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}>Anotar gasto</span>
+              <button onClick={() => { setShowFab(false); setShowAdd(true); }} style={{
+                background: C.coral, color: '#fff', border: 'none',
+                borderRadius: '50%', width: 48, height: 48, cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(229,100,78,0.35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <TrendingDown size={20} />
+              </button>
+            </div>
+          </>
+        )}
+        <button
+          onClick={() => setShowFab(f => !f)}
+          style={{
+            background: showFab ? C.inkSoft : C.coral, color: '#fff', border: 'none',
+            borderRadius: '50%', width: 60, height: 60, cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(229, 100, 78, 0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.2s, transform 0.2s',
+            transform: showFab ? 'rotate(45deg)' : 'rotate(0deg)',
+          }}
+          aria-label="Anotar"
+        >
+          <Plus size={26} />
+        </button>
+      </div>
 
       {showAdd && (
         <AddExpenseModal
           currency={profile.currency}
           onClose={() => setShowAdd(false)}
           onSave={(t) => { onAdd(t); setShowAdd(false); }}
+        />
+      )}
+
+      {showAddIncome && (
+        <AddIncomeModal
+          currency={profile.currency}
+          onClose={() => setShowAddIncome(false)}
+          onSave={(i) => { onAddIncome(i); setShowAddIncome(false); }}
         />
       )}
 
@@ -1244,12 +1443,15 @@ export default function App() {
   const [view, setView] = useState('loading');
   const [profile, setProfile] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [incomes, setIncomes] = useState([]);
 
   useEffect(() => {
     const p = store.get('profile', null);
     const t = store.get('transactions', []);
+    const inc = store.get('incomes', []);
     setProfile(p);
     setTransactions(t);
+    setIncomes(inc);
     setView(p ? 'dashboard' : 'setup');
   }, []);
 
@@ -1271,11 +1473,25 @@ export default function App() {
     store.set('transactions', next);
   };
 
+  const addIncome = (inc) => {
+    const next = [inc, ...incomes];
+    setIncomes(next);
+    store.set('incomes', next);
+  };
+
+  const delIncome = (id) => {
+    const next = incomes.filter(i => i.id !== id);
+    setIncomes(next);
+    store.set('incomes', next);
+  };
+
   const resetApp = () => {
     store.set('profile', null);
     store.set('transactions', []);
+    store.set('incomes', []);
     setProfile(null);
     setTransactions([]);
+    setIncomes([]);
     setView('setup');
   };
 
@@ -1303,10 +1519,13 @@ export default function App() {
     <Dashboard
       profile={profile}
       transactions={transactions}
+      incomes={incomes}
       onAdd={addTx}
       onDelete={delTx}
       onEdit={() => setView('edit')}
       onReset={resetApp}
+      onAddIncome={addIncome}
+      onDeleteIncome={delIncome}
     />
   );
 }
